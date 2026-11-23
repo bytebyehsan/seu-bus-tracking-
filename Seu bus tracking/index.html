@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniTransit - Smart University Bus Management & Live Tracking</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e3a8a', // Dark blue
+                        secondary: '#3b82f6', // Light blue
+                        accent: '#f59e0b',
+                        darkbg: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        .leaflet-container { height: 100%; width: 100%; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased flex flex-col min-h-screen">
+
+    <!-- Top Bar -->
+    <div class="bg-primary text-white text-xs py-2 px-4 shadow-inner">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div class="flex items-center gap-4">
+                <span><i class="fa-solid fa-phone-volume mr-1 text-secondary"></i> Emergency Hotline: +880 1700-998877</span>
+                <span><i class="fa-solid fa-envelope mr-1 text-secondary"></i> transport@university.edu.bd</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="bg-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-semibold animate-pulse"><i class="fa-solid fa-circle text-[8px] mr-1"></i> System Online</span>
+                <span id="current-time" class="font-mono"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('home')">
+                    <div class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-900/20">
+                        <i class="fa-solid fa-bus-simple"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-bold text-primary tracking-tight">UniTransit</span>
+                        <p class="text-xs text-slate-500 font-medium">University Bus Management System</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-1 lg:space-x-2">
+                    <button onclick="switchTab('home')" class="nav-link px-3 py-2 rounded-lg text-sm font-semibold text-primary hover:bg-slate-100 transition active" data-target="home">Home</button>
+                    <button onclick="switchTab('tracking')" class="nav-link px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-primary hover:bg-slate-100 transition" data-target="tracking">Live Tracking</button>
+                    <button onclick="switchTab('routes')" class="nav-link px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-primary hover:bg-slate-100 transition" data-target="routes">Bus Routes</button>
+                    <button onclick="switchTab('schedule')" class="nav-link px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-primary hover:bg-slate-100 transition" data-target="schedule">Schedule</button>
+                    <button onclick="switchTab('notices')" class="nav-link px-3 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:text-primary hover:bg-slate-100 transition" data-target="notices">Notices</button>
+                    
+                    <!-- Portals Dropdown -->
+                    <div class="relative group ml-2">
+                        <button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-blue-900 transition shadow">
+                            <i class="fa-solid fa-user-shield"></i> Portals <i class="fa-solid fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl hidden group-hover:block py-2 z-50">
+                            <button onclick="switchTab('student')" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-primary flex items-center gap-2"><i class="fa-solid fa-user-graduate w-5"></i> Student Portal</button>
+                            <button onclick="switchTab('driver')" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-primary flex items-center gap-2"><i class="fa-solid fa-id-card w-5"></i> Driver Portal</button>
+                            <button onclick="switchTab('admin')" class="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-primary flex items-center gap-2"><i class="fa-solid fa-gauge-high w-5"></i> Admin Panel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mobile menu button -->
+                <div class="flex items-center md:hidden">
+                    <button onclick="toggleMobileMenu()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Overlay -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-1 shadow-lg">
+            <button onclick="switchTab('home'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100">Home</button>
+            <button onclick="switchTab('tracking'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100">Live Tracking</button>
+            <button onclick="switchTab('routes'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100">Bus Routes</button>
+            <button onclick="switchTab('schedule'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100">Schedule</button>
+            <button onclick="switchTab('notices'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-100">Notices</button>
+            <div class="border-t border-slate-200 pt-2 space-y-1">
+                <button onclick="switchTab('student'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-blue-50"><i class="fa-solid fa-user-graduate mr-2"></i> Student Portal</button>
+                <button onclick="switchTab('driver'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-blue-50"><i class="fa-solid fa-id-card mr-2"></i> Driver Portal</button>
+                <button onclick="switchTab('admin'); toggleMobileMenu();" class="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-primary hover:bg-blue-50"><i class="fa-solid fa-gauge-high mr-2"></i> Admin Panel</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow">
+
+        <!-- ==================== HOME VIEW ==================== -->
+        <section id="view-home" class="tab-view">
+            <!-- Hero Section -->
+            <div class="relative bg-gradient-to-r from-primary via-blue-900 to-slate-900 text-white py-20 lg:py-28 overflow-hidden">
+                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <span class="inline-flex items-center gap-2 bg-blue-500/20 text-secondary border border-secondary/30 px-3 py-1 rounded-full text-xs font-semibold mb-6">
+                                <i class="fa-solid fa-sparkles"></i> Next-Gen Campus Transport
+                            </span>
+                            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight mb-6">
+                                Smart University Bus Transportation System
+                            </h1>
+                            <p class="text-lg text-slate-300 mb-8 leading-relaxed">
+                                Track your university buses with 31-stop detailed progress timelines, real-time GPS locations, and updated schedules.
+                            </p>
+                            <div class="flex flex-wrap gap-4">
+                                <button onclick="switchTab('tracking')" class="bg-secondary hover:bg-blue-600 text-white font-bold px-8 py-4 rounded-xl shadow-lg transition flex items-center gap-3 group">
+                                    <i class="fa-solid fa-location-crosshairs text-xl group-hover:rotate-45 transition"></i> Track Your Bus
+                                </button>
+                                <button onclick="switchTab('routes')" class="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold px-8 py-4 rounded-xl backdrop-blur transition flex items-center gap-3">
+                                    <i class="fa-solid fa-route text-xl"></i> Explore Bus Routes (31 Stops)
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <div class="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-2xl shadow-2xl">
+                                <div class="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-3 h-3 bg-emerald-500 rounded-full animate-ping"></div>
+                                        <span class="font-semibold text-sm">Live Fleet Status (Route 1)</span>
+                                    </div>
+                                    <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded-full font-mono">31 Stops Mapped</span>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="bg-slate-800/80 p-3.5 rounded-xl border border-white/10 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-blue-500/20 text-secondary rounded-lg flex items-center justify-center font-bold">B-01</div>
+                                            <div>
+                                                <h4 class="text-sm font-bold text-white">Route 1: Savar &rarr; Sign Board</h4>
+                                                <p class="text-xs text-slate-400">Current: Farmgate (Stop 12/31)</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs bg-emerald-500 text-white px-2.5 py-1 rounded-md font-semibold">On Time</span>
+                                    </div>
+                                </div>
+                                <button onclick="openRouteTimeline(0)" class="w-full mt-4 text-center text-xs font-semibold text-secondary hover:underline">View Full 31-Stop Progress Timeline &rarr;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Section -->
+            <div class="bg-white border-b border-slate-200 py-10 shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                        <div class="p-4 border-r last:border-none border-slate-100">
+                            <div class="text-3xl lg:text-4xl font-extrabold text-primary mb-1">31</div>
+                            <p class="text-sm font-medium text-slate-500">Route 1 Bus Stops</p>
+                        </div>
+                        <div class="p-4 border-r last:border-none border-slate-100">
+                            <div class="text-3xl lg:text-4xl font-extrabold text-secondary mb-1">8</div>
+                            <p class="text-sm font-medium text-slate-500">Active Campus Routes</p>
+                        </div>
+                        <div class="p-4 border-r last:border-none border-slate-100">
+                            <div class="text-3xl lg:text-4xl font-extrabold text-emerald-600 mb-1">12,500+</div>
+                            <p class="text-sm font-medium text-slate-500">Registered Students</p>
+                        </div>
+                        <div class="p-4">
+                            <div class="text-3xl lg:text-4xl font-extrabold text-amber-600 mb-1">72</div>
+                            <p class="text-sm font-medium text-slate-500">Daily Campus Trips</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Popular Routes & Quick Schedule Preview -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                <div class="flex justify-between items-end mb-10">
+                    <div>
+                        <span class="text-xs font-bold text-secondary uppercase tracking-widest">Explore</span>
+                        <h2 class="text-3xl font-bold text-slate-900 mt-1">Primary Bus Route</h2>
+                    </div>
+                    <button onclick="switchTab('routes')" class="text-primary font-semibold hover:underline flex items-center gap-2">View All Routes <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="home-routes-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- Latest Notices Section -->
+            <div class="bg-slate-100 py-16 border-t border-slate-200">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-end mb-10">
+                        <div>
+                            <span class="text-xs font-bold text-secondary uppercase tracking-widest">Updates</span>
+                            <h2 class="text-3xl font-bold text-slate-900 mt-1">Latest Transportation Notices</h2>
+                        </div>
+                        <button onclick="switchTab('notices')" class="text-primary font-semibold hover:underline flex items-center gap-2">All Notices <i class="fa-solid fa-arrow-right"></i></button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="home-notices-grid">
+                        <!-- Populated via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== LIVE TRACKING VIEW ==================== -->
+        <section id="view-tracking" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Live Bus Tracking (31 Stops Mapped)</h2>
+                        <p class="text-slate-600 text-sm">Real-time GPS locations and route polylines showing all 31 transit stops.</p>
+                    </div>
+                    <button onclick="openRouteTimeline(0)" class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold shadow hover:bg-blue-900 transition flex items-center gap-2">
+                        <i class="fa-solid fa-timeline"></i> View Route 1 31-Stop Timeline
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Left Sidebar: Bus List & Filters -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col h-[600px]">
+                        <div class="mb-4">
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                </span>
+                                <input type="text" id="bus-search-input" onkeyup="filterTrackingBuses()" placeholder="Search bus number or route..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2 mb-4">
+                            <button onclick="setTrackingFilter('all')" class="tracking-filter-btn flex-1 py-1.5 px-3 bg-primary text-white rounded-lg text-xs font-semibold transition">All</button>
+                            <button onclick="setTrackingFilter('Active')" class="tracking-filter-btn flex-1 py-1.5 px-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition">Active</button>
+                            <button onclick="setTrackingFilter('Delayed')" class="tracking-filter-btn flex-1 py-1.5 px-3 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition">Delayed</button>
+                        </div>
+
+                        <div class="flex-grow overflow-y-auto space-y-3 pr-1" id="tracking-bus-list">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Right Map Area -->
+                    <div class="lg:col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 h-[600px] flex flex-col">
+                        <div id="map" class="w-full flex-grow rounded-xl z-10"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== BUS ROUTES VIEW ==================== -->
+        <section id="view-routes" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">University Bus Routes</h2>
+                        <p class="text-slate-600 text-sm">Explore complete route maps, boarding points, and intermediate stops.</p>
+                    </div>
+                    <div class="w-full md:w-72">
+                        <input type="text" id="route-search-input" onkeyup="filterRoutes()" placeholder="Search route name or number..." class="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="routes-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCHEDULE VIEW ==================== -->
+        <section id="view-schedule" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Master Bus Timetable</h2>
+                        <p class="text-slate-600 text-sm">Check morning, afternoon, and evening departures across all routes.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <select id="schedule-route-filter" onchange="filterScheduleTable()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm">
+                            <option value="all">All Routes</option>
+                        </select>
+                        <select id="schedule-shift-filter" onchange="filterScheduleTable()" class="px-4 py-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary shadow-sm">
+                            <option value="all">All Shifts</option>
+                            <option value="Morning">Morning Shift</option>
+                            <option value="Afternoon">Afternoon Shift</option>
+                            <option value="Evening">Evening Shift</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-4 font-semibold">Bus No</th>
+                                    <th class="p-4 font-semibold">Route Name</th>
+                                    <th class="p-4 font-semibold">Departure</th>
+                                    <th class="p-4 font-semibold">Arrival</th>
+                                    <th class="p-4 font-semibold">Boarding Point</th>
+                                    <th class="p-4 font-semibold">Shift</th>
+                                    <th class="p-4 font-semibold">Operating Days</th>
+                                </tr>
+                            </thead>
+                            <tbody id="schedule-table-body" class="divide-y divide-slate-100 text-sm">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== NOTICES VIEW ==================== -->
+        <section id="view-notices" class="tab-view hidden">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-slate-900">Transportation Notices</h2>
+                    <p class="text-slate-600 text-sm">Important announcements regarding schedule changes, emergency alerts, and updates.</p>
+                </div>
+                <div class="space-y-4" id="notices-container">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== STUDENT DASHBOARD ==================== -->
+        <section id="view-student" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="bg-gradient-to-r from-primary to-blue-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-white/10 border-2 border-white/30 rounded-2xl flex items-center justify-center text-3xl font-bold">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs bg-secondary px-2.5 py-1 rounded-full font-semibold">Student Portal</span>
+                            <h2 class="text-2xl font-bold mt-1">Tanvir Ahmed</h2>
+                            <p class="text-sm text-slate-300">ID: 2021-CS-049 | Dept. of Computer Science</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="openReportModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Report Problem
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Assigned Bus Card -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-bus text-primary"></i> Assigned Bus Pass
+                        </h3>
+                        <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-slate-500 font-semibold uppercase">Bus Number</span>
+                                <span class="font-bold text-primary">B-01 (Route 1)</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-slate-500 font-semibold uppercase">Driver</span>
+                                <span class="font-medium text-slate-700">Md. Rahim Mia (+8801812345678)</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs text-slate-500 font-semibold uppercase">Departure Time</span>
+                                <span class="font-semibold text-emerald-600">07:30 AM (Savar to Sign Board)</span>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('tracking')" class="w-full mt-4 bg-primary hover:bg-blue-900 text-white font-semibold py-2.5 rounded-xl text-sm transition">Track Assigned Bus</button>
+                    </div>
+
+                    <!-- Favorite Routes & Notices -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-star text-amber-500"></i> Favorite Routes & Quick Bookmarks
+                            </h3>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div>
+                                        <h4 class="font-bold text-sm text-slate-800">Route 1: Savar &rarr; Sign Board (31 Stops)</h4>
+                                        <p class="text-xs text-slate-500">Departs 07:30 AM | Every Working Day</p>
+                                    </div>
+                                    <button onclick="openRouteTimeline(0)" class="text-xs bg-blue-100 text-primary px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-200 transition">View Timeline</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== DRIVER DASHBOARD ==================== -->
+        <section id="view-driver" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="bg-gradient-to-r from-slate-900 to-primary rounded-2xl p-6 sm:p-8 text-white shadow-xl mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-white/10 border-2 border-white/30 rounded-2xl flex items-center justify-center text-3xl font-bold">
+                            <i class="fa-solid fa-id-card"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs bg-emerald-500 px-2.5 py-1 rounded-full font-semibold">Driver Portal</span>
+                            <h2 class="text-2xl font-bold mt-1">Md. Rahim Mia</h2>
+                            <p class="text-sm text-slate-300">Assigned Bus: <span class="font-bold text-white">B-01 (Route 1)</span></p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="alert('Trip status updated: Trip Started!')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-play"></i> Start Trip
+                        </button>
+                        <button onclick="alert('Trip ended successfully.')" class="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-stop"></i> End Trip
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <span class="text-xs font-semibold text-slate-400 uppercase">Current Route</span>
+                        <h4 class="text-lg font-bold text-slate-900 mt-1">Savar &rarr; Sign Board</h4>
+                        <p class="text-xs text-slate-500 mt-2">Total Stops: 31 Checkpoints</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <span class="text-xs font-semibold text-slate-400 uppercase">Bus Status</span>
+                        <h4 class="text-lg font-bold text-emerald-600 mt-1 flex items-center gap-2"><i class="fa-solid fa-circle text-xs"></i> On Schedule</h4>
+                        <button onclick="alert('Status updated to Delayed!')" class="mt-3 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200 font-semibold px-3 py-1.5 rounded-lg transition">Report Delay</button>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <span class="text-xs font-semibold text-slate-400 uppercase">GPS Broadcast</span>
+                        <h4 class="text-lg font-bold text-blue-600 mt-1">Broadcasting Active</h4>
+                        <p class="text-xs text-slate-500 mt-2">Last ping: Just now</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== ADMIN PANEL ==================== -->
+        <section id="view-admin" class="tab-view hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-900">Admin Control Panel</h2>
+                        <p class="text-slate-600 text-sm">Manage university buses, drivers, routes, schedules, and complaints.</p>
+                    </div>
+                    <button onclick="openAddBusModal()" class="bg-primary hover:bg-blue-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add New Bus
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-semibold">Total Buses</span>
+                        <h3 class="text-2xl font-extrabold text-primary mt-1">24</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-semibold">Active Drivers</span>
+                        <h3 class="text-2xl font-extrabold text-emerald-600 mt-1">22</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-semibold">Active Routes</span>
+                        <h3 class="text-2xl font-extrabold text-secondary mt-1">8</h3>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <span class="text-xs text-slate-500 font-semibold">Pending Reports</span>
+                        <h3 class="text-2xl font-extrabold text-amber-600 mt-1">3</h3>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-6 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="font-bold text-lg text-slate-900">Bus Fleet Management</h3>
+                        <input type="text" placeholder="Search buses..." class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-4 font-semibold">Bus No</th>
+                                    <th class="p-4 font-semibold">Route</th>
+                                    <th class="p-4 font-semibold">Driver Name</th>
+                                    <th class="p-4 font-semibold">Capacity</th>
+                                    <th class="p-4 font-semibold">Status</th>
+                                    <th class="p-4 font-semibold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-bus-table" class="divide-y divide-slate-100 text-sm">
+                                <!-- Populated via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Route Timeline Modal (Progress-bar style for 31 stops) -->
+    <div id="timeline-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-6 bg-primary text-white flex justify-between items-center">
+                <div>
+                    <span class="text-xs bg-secondary px-2.5 py-1 rounded-full font-semibold">Route Timeline Progress</span>
+                    <h3 id="modal-route-title" class="text-xl font-bold mt-1">Route 1: Savar to Sign Board</h3>
+                </div>
+                <button onclick="closeRouteTimeline()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow space-y-4">
+                <p class="text-xs text-slate-500 mb-2">Showing all 31 transit checkpoints in order of progression:</p>
+                <div id="timeline-stops-container" class="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-blue-200">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeRouteTimeline()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2 rounded-xl text-sm font-semibold transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Problem Modal -->
+    <div id="report-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg text-slate-900">Report Bus-Related Issue</h3>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <form onsubmit="submitReport(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Bus Number / Route</label>
+                    <select class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                        <option>B-01 (Route 1 - Savar to Sign Board)</option>
+                        <option>B-02 (Mirpur Shuttle)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Issue Type</label>
+                    <select class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+                        <option>Bus Delayed / Not Arrived</option>
+                        <option>Overcrowding Issue</option>
+                        <option>Driver Misbehavior</option>
+                        <option>Mechanical Breakdown</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Description</label>
+                    <textarea rows="3" placeholder="Provide details..." class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm"></textarea>
+                </div>
+                <button type="submit" class="w-full bg-primary hover:bg-blue-900 text-white font-semibold py-3 rounded-xl text-sm transition">Submit Report</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-darkbg text-white pt-16 pb-12 border-t border-slate-800 mt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+                <div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center text-white text-xl">
+                            <i class="fa-solid fa-bus-simple"></i>
+                        </div>
+                        <span class="text-xl font-bold tracking-tight">UniTransit</span>
+                    </div>
+                    <p class="text-slate-400 text-sm leading-relaxed">
+                        Smart University Bus Management & Live Tracking System featuring 31-stop detailed route progression for safe and punctual student transit.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Quick Links</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><button onclick="switchTab('home')" class="hover:text-white transition">Home</button></li>
+                        <li><button onclick="switchTab('tracking')" class="hover:text-white transition">Live Tracking</button></li>
+                        <li><button onclick="switchTab('routes')" class="hover:text-white transition">Bus Routes</button></li>
+                        <li><button onclick="switchTab('schedule')" class="hover:text-white transition">Schedule Timetable</button></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Portals</h4>
+                    <ul class="space-y-2 text-sm text-slate-400">
+                        <li><button onclick="switchTab('student')" class="hover:text-white transition">Student Portal</button></li>
+                        <li><button onclick="switchTab('driver')" class="hover:text-white transition">Driver Portal</button></li>
+                        <li><button onclick="switchTab('admin')" class="hover:text-white transition">Admin Panel</button></li>
+                        <li><button onclick="switchTab('notices')" class="hover:text-white transition">Transportation Notices</button></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-sm uppercase tracking-wider text-slate-300 mb-4">Contact Transport Office</h4>
+                    <p class="text-sm text-slate-400 mb-2"><i class="fa-solid fa-location-dot mr-2 text-secondary"></i> Transport Building, Room 102, Campus</p>
+                    <p class="text-sm text-slate-400 mb-2"><i class="fa-solid fa-phone mr-2 text-secondary"></i> +880 1700-998877</p>
+                    <p class="text-sm text-slate-400"><i class="fa-solid fa-envelope mr-2 text-secondary"></i> transport@university.edu.bd</p>
+                </div>
+            </div>
+            <div class="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500">
+                <p>&copy; 2026 UniTransit - University Bus Management System. All rights reserved.</p>
+                <div class="flex space-x-6 mt-4 sm:mt-0">
+                    <a href="#" class="hover:text-slate-400">Privacy Policy</a>
+                    <a href="#" class="hover:text-slate-400">Terms of Service</a>
+                    <a href="#" class="hover:text-slate-400">Support</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript Data & Application Logic -->
+    <script>
+        // --- 31 Stops Data with simulated GPS Coordinates from Savar to Sign Board ---
+        const route1Stops = [
+            { name: "Savar (সাভার)", lat: 23.8583, lng: 90.2667 },
+            { name: "Hemayetpur (হেমায়েতপুর)", lat: 23.8150, lng: 90.2850 },
+            { name: "Amin Bazar (আমিন বাজার)", lat: 23.7912, lng: 90.3150 },
+            { name: "Gabtoli (গাবতলি)", lat: 23.7797, lng: 90.3473 },
+            { name: "Technical (টেকনিক্যাল)", lat: 23.7820, lng: 90.3550 },
+            { name: "Kallyanpur (কল্যাণপুর)", lat: 23.7805, lng: 90.3630 },
+            { name: "Shyamoli (শ্যামলী)", lat: 23.7745, lng: 90.3662 },
+            { name: "Shishu Mela (শিশু মেলা)", lat: 23.7680, lng: 90.3690 },
+            { name: "College Gate (কলেজ গেট)", lat: 23.7620, lng: 90.3720 },
+            { name: "Asad Gate (আসাদ গেট)", lat: 23.7570, lng: 90.3750 },
+            { name: "Khamar Bari (খামার বাড়ি)", lat: 23.7550, lng: 90.3830 },
+            { name: "Farmgate (ফার্মগেট)", lat: 23.7565, lng: 90.3882 },
+            { name: "Kawran Bazar (কাওরান বাজার)", lat: 23.7510, lng: 90.3930 },
+            { name: "Bangla Motor (বাংলা মোটর)", lat: 23.7460, lng: 90.3935 },
+            { name: "Mogbazar (মগবাজার)", lat: 23.7480, lng: 90.4020 },
+            { name: "Mouchak (মৌচাক)", lat: 23.7485, lng: 90.4110 },
+            { name: "Malibaag Moor (মালিবাগ মোড়)", lat: 23.7488, lng: 90.4180 },
+            { name: "Rajarbag (রাজারবাগ)", lat: 23.7430, lng: 90.4200 },
+            { name: "Khilgaon flyover (খিলগাঁও ফ্লাইওভার)", lat: 23.7460, lng: 90.4280 },
+            { name: "Bashabo (বাসাবো)", lat: 23.7380, lng: 90.4300 },
+            { name: "Mugdapara (মুগদাপাড়া)", lat: 23.7320, lng: 90.4320 },
+            { name: "Manik Nagar (মানিক নগর)", lat: 23.7250, lng: 90.4300 },
+            { name: "Golapbagh Chowrasta (গোলাপবাগ চৌরাস্তা)", lat: 23.7200, lng: 90.4270 },
+            { name: "Sayedabad (সায়াপাবাদ)", lat: 23.7140, lng: 90.4240 },
+            { name: "Janapoth Moor (জনপথ মোড়)", lat: 23.7100, lng: 90.4280 },
+            { name: "Jatrabari (যাত্রাবাড়ি)", lat: 23.7070, lng: 90.4330 },
+            { name: "Kazla (কাজলা)", lat: 23.7000, lng: 90.4380 },
+            { name: "Shonir Akhra (শনির আখরা)", lat: 23.6930, lng: 90.4420 },
+            { name: "Rayerbag (রায়েরবাগ)", lat: 23.6870, lng: 90.4470 },
+            { name: "Matuail (মাতুয়াইল)", lat: 23.6800, lng: 90.4520 },
+            { name: "Sign Board (সাইন বোর্ড)", lat: 23.6720, lng: 90.4580 }
+        ];
+
+        const busesData = [
+            { id: "B-01", route: "Route 1: Savar to Sign Board", driver: "Md. Rahim Mia", phone: "+8801812345678", status: "Active", currentStopIndex: 11, speed: "32 km/h", eta: "12 mins" },
+            { id: "B-02", route: "Route 2: Mirpur Shuttle", driver: "Jahangir Alam", phone: "+8801812345679", status: "Active", lat: 23.8041, lng: 90.3652, speed: "28 km/h", eta: "8 mins" }
+        ];
+
+        const routesData = [
+            { id: 1, name: "Route 1: Savar to Sign Board", number: "RT-01", start: "Savar", dest: "Sign Board", stops: route1Stops.map(s => s.name), buses: 4, status: "Active" },
+            { id: 2, name: "Route 2: Mirpur Shuttle", number: "RT-02", start: "Mirpur 10", dest: "University Campus", stops: ["Mirpur 10", "Kazipara", "Agargaon", "Bijoy Sharani", "Mohakhali", "Campus"], buses: 5, status: "Active" },
+            { id: 3, name: "Route 3: Dhanmondi Link", number: "RT-03", start: "Dhanmondi 27", dest: "University Campus", stops: ["Dhanmondi 27", "Kalabagan", "Farmgate", "Karwan Bazar", "Mogbazar", "Campus"], buses: 3, status: "Delayed" }
+        ];
+
+        const schedulesData = [
+            { bus: "B-01", route: "Route 1: Savar to Sign Board", dep: "07:30 AM", arr: "10:15 AM", stop: "Savar", shift: "Morning", days: "Sun - Thu" },
+            { bus: "B-02", route: "Route 2: Mirpur Shuttle", dep: "07:45 AM", arr: "08:50 AM", stop: "Mirpur 10", shift: "Morning", days: "Sun - Thu" }
+        ];
+
+        const noticesData = [
+            { id: 1, title: "Special Examination Transport Schedule", date: "Nov 18, 2026", tag: "Exam Notice", desc: "Additional buses will operate starting 7:00 AM during mid-term examination weeks across all routes." },
+            { id: 2, title: "Route 1 Traffic Update at Farmgate", date: "Nov 15, 2026", tag: "Route Update", desc: "Route 1 buses carrying students from Savar may experience a 10-minute delay near Farmgate and Kawran Bazar." }
+        ];
+
+        let map = null;
+        let mapMarkers = [];
+        let routePolyline = null;
+        let currentTrackingFilter = 'all';
+
+        // --- Live Clock ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleTimeString();
+        }, 1000);
+
+        // --- Tab Switching ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-view').forEach(el => el.classList.add('hidden'));
+            document.getElementById('view-' + tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('text-primary', 'bg-slate-100'));
+            const activeNav = document.querySelector(`[data-target="${tabId}"]`);
+            if(activeNav) activeNav.classList.add('text-primary', 'bg-slate-100');
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if(tabId === 'tracking') {
+                setTimeout(() => {
+                    if(!map) initMap();
+                    else map.invalidateSize();
+                }, 200);
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Render Home Content ---
+        function renderHome() {
+            const routesGrid = document.getElementById('home-routes-grid');
+            routesGrid.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition md:col-span-3">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="text-xs bg-blue-50 text-secondary font-semibold px-2.5 py-1 rounded-full">RT-01 (Primary Route)</span>
+                        <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">Active</span>
+                    </div>
+                    <h3 class="font-bold text-xl text-slate-900 mb-2">Route 1: Savar to Sign Board (31 Complete Stops)</h3>
+                    <p class="text-xs text-slate-500 mb-4"><span class="font-semibold text-slate-700">From:</span> Savar &rarr; <span class="font-semibold text-slate-700">To:</span> Sign Board via Gabtoli, Farmgate, Mouchak, and Jatrabari.</p>
+                    <div class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl mb-4 max-h-24 overflow-y-auto">
+                        <span class="font-semibold text-primary block mb-1">Stops List:</span> ${route1Stops.map(s => s.name).join(' &bull; ')}
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="openRouteTimeline(0)" class="bg-primary hover:bg-blue-900 text-white font-semibold px-4 py-2 rounded-xl text-xs transition">View 31-Stop Timeline Progress</button>
+                        <button onclick="switchTab('tracking')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition">Track on Map</button>
+                    </div>
+                </div>
+            `;
+
+            const noticesGrid = document.getElementById('home-notices-grid');
+            noticesGrid.innerHTML = noticesData.map(n => `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-xs font-semibold bg-blue-100 text-primary px-2.5 py-1 rounded-md">${n.tag}</span>
+                            <span class="text-xs text-slate-400">${n.date}</span>
+                        </div>
+                        <h4 class="font-bold text-slate-900 text-base mb-2">${n.title}</h4>
+                        <p class="text-xs text-slate-600 leading-relaxed">${n.desc}</p>
+                    </div>
+                    <button onclick="switchTab('notices')" class="mt-4 text-xs font-semibold text-primary hover:underline text-left">Read Full Notice &rarr;</button>
+                </div>
+            `).join('');
+
+            renderRoutesPage();
+            renderSchedulePage();
+            renderNoticesPage();
+            renderAdminBusTable();
+            renderTrackingBusList();
+        }
+
+        // --- Render Routes Page ---
+        function renderRoutesPage() {
+            const grid = document.getElementById('routes-grid');
+            grid.innerHTML = routesData.map((r, idx) => `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 ${idx === 0 ? 'md:col-span-2 lg:col-span-3 border-blue-200 bg-blue-50/20' : ''}">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs bg-blue-50 text-secondary font-bold px-2.5 py-1 rounded-full">${r.number}</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">${r.status}</span>
+                    </div>
+                    <h3 class="font-bold text-lg text-slate-900 mb-1">${r.name}</h3>
+                    <p class="text-xs text-slate-500 mb-3">${r.start} to ${r.dest} (${r.stops.length} Checkpoints)</p>
+                    <div class="bg-white p-3 rounded-xl text-xs text-slate-600 mb-4 border border-slate-100 max-h-32 overflow-y-auto">
+                        <p class="font-semibold mb-1 text-slate-700">All Intermediate Stops (${r.stops.length}):</p>
+                        <p>${r.stops.join(' &rarr; ')}</p>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-500 pt-2 border-t border-slate-100">
+                        <span><i class="fa-solid fa-bus text-primary mr-1"></i> ${r.buses} Buses Assigned</span>
+                        <div class="flex gap-2">
+                            ${idx === 0 ? `<button onclick="openRouteTimeline(${idx})" class="text-primary font-bold hover:underline bg-blue-100 px-3 py-1 rounded-lg">View Timeline</button>` : ''}
+                            <button onclick="switchTab('tracking')" class="text-primary font-semibold hover:underline">Live Map &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterRoutes() {
+            const query = document.getElementById('route-search-input').value.toLowerCase();
+            const filtered = routesData.filter(r => r.name.toLowerCase().includes(query) || r.number.toLowerCase().includes(query));
+            const grid = document.getElementById('routes-grid');
+            grid.innerHTML = filtered.map((r, idx) => `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-xs bg-blue-50 text-secondary font-bold px-2.5 py-1 rounded-full">${r.number}</span>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">${r.status}</span>
+                    </div>
+                    <h3 class="font-bold text-lg text-slate-900 mb-1">${r.name}</h3>
+                    <p class="text-xs text-slate-500 mb-3">${r.start} to ${r.dest}</p>
+                    <div class="bg-slate-50 p-3 rounded-xl text-xs text-slate-600 mb-4 max-h-24 overflow-y-auto">
+                        <p class="font-semibold mb-1 text-slate-700">Stops:</p>
+                        <p>${r.stops.join(' &rarr; ')}</p>
+                    </div>
+                    <div class="flex justify-between items-center text-xs text-slate-500 pt-2 border-t border-slate-100">
+                        <span><i class="fa-solid fa-bus text-primary mr-1"></i> ${r.buses} Buses Assigned</span>
+                        <button onclick="openRouteTimeline(0)" class="text-primary font-semibold hover:underline">Timeline &rarr;</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- Render Timeline Modal (Progress bar style) ---
+        function openRouteTimeline(routeIdx) {
+            const modal = document.getElementById('timeline-modal');
+            const container = document.getElementById('timeline-stops-container');
+            const title = document.getElementById('modal-route-title');
+
+            if(routeIdx === 0) {
+                title.innerText = "Route 1: Savar to Sign Board (31 Stops Progress)";
+                const currentBusStopIdx = 11; // Farmgate for demo bus B-01
+
+                container.innerHTML = route1Stops.map((stop, index) => {
+                    let statusColor = "bg-slate-300 text-slate-600 border-white";
+                    let textStyle = "text-slate-600";
+                    let badge = "";
+
+                    if(index < currentBusStopIdx) {
+                        statusColor = "bg-emerald-500 text-white border-emerald-200";
+                        textStyle = "text-slate-400 line-through";
+                        badge = `<span class="ml-2 text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-semibold">Passed</span>`;
+                    } else if(index === currentBusStopIdx) {
+                        statusColor = "bg-secondary text-white border-blue-200 ring-4 ring-blue-100 animate-pulse";
+                        textStyle = "text-primary font-bold";
+                        badge = `<span class="ml-2 text-[10px] bg-secondary text-white px-2 py-0.5 rounded font-semibold">Bus B-01 Here Now</span>`;
+                    } else {
+                        badge = `<span class="ml-2 text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded">Upcoming</span>`;
+                    }
+
+                    return `
+                        <div class="relative flex items-center group">
+                            <div class="absolute -left-6 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${statusColor}">
+                                ${index + 1}
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 w-full flex justify-between items-center ml-2">
+                                <span class="text-sm ${textStyle}">${stop.name}</span>
+                                ${badge}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeRouteTimeline() {
+            document.getElementById('timeline-modal').classList.add('hidden');
+        }
+
+        // --- Render Schedule Page ---
+        function renderSchedulePage() {
+            const routeFilter = document.getElementById('schedule-route-filter');
+            if(routeFilter.options.length <= 1) {
+                routesData.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.name;
+                    opt.innerText = r.name;
+                    routeFilter.appendChild(opt);
+                });
+            }
+
+            const tbody = document.getElementById('schedule-table-body');
+            tbody.innerHTML = schedulesData.map(s => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-primary">${s.bus}</td>
+                    <td class="p-4 font-semibold text-slate-800">${s.route}</td>
+                    <td class="p-4 font-mono text-slate-600">${s.dep}</td>
+                    <td class="p-4 font-mono text-slate-600">${s.arr}</td>
+                    <td class="p-4 text-slate-600">${s.stop}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${s.shift==='Morning'?'bg-blue-100 text-primary':'bg-amber-100 text-amber-800'}">${s.shift}</span></td>
+                    <td class="p-4 text-slate-500 text-xs">${s.days}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterScheduleTable() {
+            const rVal = document.getElementById('schedule-route-filter').value;
+            const sVal = document.getElementById('schedule-shift-filter').value;
+
+            const filtered = schedulesData.filter(s => {
+                const matchR = (rVal === 'all' || s.route === rVal);
+                const matchS = (sVal === 'all' || s.shift === sVal);
+                return matchR && matchS;
+            });
+
+            const tbody = document.getElementById('schedule-table-body');
+            tbody.innerHTML = filtered.map(s => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-primary">${s.bus}</td>
+                    <td class="p-4 font-semibold text-slate-800">${s.route}</td>
+                    <td class="p-4 font-mono text-slate-600">${s.dep}</td>
+                    <td class="p-4 font-mono text-slate-600">${s.arr}</td>
+                    <td class="p-4 text-slate-600">${s.stop}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${s.shift==='Morning'?'bg-blue-100 text-primary':'bg-amber-100 text-amber-800'}">${s.shift}</span></td>
+                    <td class="p-4 text-slate-500 text-xs">${s.days}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Render Notices Page ---
+        function renderNoticesPage() {
+            const container = document.getElementById('notices-container');
+            container.innerHTML = noticesData.map(n => `
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs font-semibold bg-blue-100 text-primary px-3 py-1 rounded-full">${n.tag}</span>
+                        <span class="text-xs text-slate-400"><i class="fa-regular fa-calendar mr-1"></i> ${n.date}</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">${n.title}</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">${n.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        // --- Render Admin Bus Table ---
+        function renderAdminBusTable() {
+            const tbody = document.getElementById('admin-bus-table');
+            tbody.innerHTML = busesData.map(b => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-4 font-bold text-primary">${b.id}</td>
+                    <td class="p-4 font-medium text-slate-800">${b.route}</td>
+                    <td class="p-4 text-slate-600">${b.driver}</td>
+                    <td class="p-4 text-slate-600">50 Seats</td>
+                    <td class="p-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${b.status==='Active'?'bg-emerald-100 text-emerald-800':'bg-slate-200 text-slate-700'}">${b.status}</span></td>
+                    <td class="p-4 flex gap-2">
+                        <button onclick="alert('Editing bus ${b.id}')" class="p-2 bg-blue-50 text-primary rounded-lg hover:bg-blue-100 transition"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="alert('Deleting bus ${b.id}')" class="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100 transition"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // --- Interactive Map Initialization with 31 Stops Plotted ---
+        function initMap() {
+            // Centered on Dhaka / Savar corridor
+            map = L.map('map').setView([23.7550, 90.3882], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            renderMapRouteAndStops();
+        }
+
+        function renderMapRouteAndStops() {
+            if(!map) return;
+
+            // Clear old markers and lines
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+            if(routePolyline) map.removeLayer(routePolyline);
+
+            // Draw Polyline connecting all 31 stops for Route 1
+            const latLngs = route1Stops.map(s => [s.lat, s.lng]);
+            routePolyline = L.polyline(latLngs, { color: '#3b82f6', weight: 5, opacity: 0.8, dashArray: '6, 6' }).addTo(map);
+
+            // Add markers for all 31 stops
+            route1Stops.forEach((stop, idx) => {
+                const stopMarker = L.circleMarker([stop.lat, stop.lng], {
+                    radius: idx === 11 ? 8 : 5, // Highlight Farmgate (Bus current stop)
+                    color: idx === 11 ? '#f59e0b' : '#1e3a8a',
+                    fillColor: idx === 11 ? '#f59e0b' : '#3b82f6',
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup(`<b>Stop #${idx + 1}:</b> ${stop.name}`);
+                mapMarkers.push(stopMarker);
+            });
+
+            // Add Bus B-01 current position marker
+            const currentBusStop = route1Stops[11]; // Farmgate
+            const busMarker = L.marker([currentBusStop.lat, currentBusStop.lng], {
+                icon: L.divIcon({
+                    className: 'custom-bus-icon',
+                    html: `<div style="background:#1e3a8a;color:white;padding:6px 10px;border-radius:20px;font-weight:bold;font-size:11px;box-shadow:0 4px 6px rgba(0,0,0,0.3);border:2px solid white;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-bus"></i> B-01</div>`,
+                    iconSize: [60, 30]
+                })
+            }).addTo(map).bindPopup(`<b>Bus B-01 (Route 1)</b><br>Driver: Md. Rahim Mia<br>Current Stop: Farmgate (Stop 12/31)<br>Status: <b>Active</b>`);
+            mapMarkers.push(busMarker);
+        }
+
+        function renderTrackingBusList() {
+            const list = document.getElementById('tracking-bus-list');
+            const query = (document.getElementById('bus-search-input')?.value || '').toLowerCase();
+
+            const filtered = busesData.filter(b => {
+                const matchSearch = b.id.toLowerCase().includes(query) || b.route.toLowerCase().includes(query);
+                const matchFilter = (currentTrackingFilter === 'all' || b.status === currentTrackingFilter);
+                return matchSearch && matchFilter;
+            });
+
+            list.innerHTML = filtered.map(b => `
+                <div onclick="focusRoute1()" class="p-4 bg-slate-50 hover:bg-blue-50/55 border border-slate-200 rounded-xl cursor-pointer transition">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-sm text-primary">${b.id}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-semibold bg-emerald-100 text-emerald-800">${b.status}</span>
+                    </div>
+                    <h4 class="font-semibold text-xs text-slate-800 mb-1">${b.route}</h4>
+                    <div class="flex justify-between items-center text-[11px] text-slate-500">
+                        <span>Driver: ${b.driver}</span>
+                        <span class="font-mono text-secondary font-bold">31 Stops Mapped</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setTrackingFilter(status) {
+            currentTrackingFilter = status;
+            document.querySelectorAll('.tracking-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-700');
+            });
+            event.target.classList.remove('bg-slate-100', 'text-slate-700');
+            event.target.classList.add('bg-primary', 'text-white');
+            renderTrackingBusList();
+        }
+
+        function filterTrackingBuses() {
+            renderTrackingBusList();
+        }
+
+        function focusRoute1() {
+            if(map) {
+                map.setView([23.7565, 90.3882], 13);
+            }
+        }
+
+        // --- Modals ---
+        function openReportModal() {
+            document.getElementById('report-modal').classList.remove('hidden');
+        }
+        function closeReportModal() {
+            document.getElementById('report-modal').classList.add('hidden');
+        }
+        function submitReport(e) {
+            e.preventDefault();
+            alert('Report submitted successfully to the transport administration!');
+            closeReportModal();
+        }
+
+        function openAddBusModal() {
+            alert('Add Bus modal opened. (Demo action)');
+        }
+
+        // Initial load
+        window.onload = function() {
+            renderHome();
+        };
+    </script>
+</body>
+</html>
